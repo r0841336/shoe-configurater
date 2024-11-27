@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout</title>
+  <link rel="stylesheet" href="checkoutstyle.css">
+</head>
+<body>
+  <div class="checkout-container">
+    <h1>Checkout</h1>
+    
+    <div class="checkout-content">
+      <!-- Shoe Preview Section -->
+      <div class="shoe-preview">
+        <h3>Your Customized Shoe</h3>
+        <canvas id="checkout-canvas"></canvas>
+      </div>
+
+      <!-- Customization Summary Section -->
+      <div id="customization-summary">
+        <h3>Customization Summary</h3>
+        <ul id="summary-list"></ul>
+      </div>
+    </div>
+
+    <!-- Order Form Section -->
+    <form id="checkout-form">
+      <h3>Order Details</h3>
+
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" placeholder="Your Name" required>
+
+      <label for="address">Address</label>
+      <input type="text" id="address" name="address" placeholder="Your Address" required>
+
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" placeholder="Your Email" required>
+
+      <label for="quantity">Quantity</label>
+      <input type="number" id="quantity" name="quantity" min="1" value="1" required>
+
+      <button type="submit" id="place-order">Place Order</button>
+    </form>
+  </div>
+  <script src="checkout.js"></script>
+</body>
+</html>

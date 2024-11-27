@@ -1,39 +1,48 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'; // Import OrbitControls
-import * as dat from 'dat.gui'; // dat.GUI
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 // Scene setup
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
 // Renderer setup
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Load the 360 texture (this will be used for reflections)
-const loader = new THREE.TextureLoader();
-const texture360 = loader.load('Gemini_Generated_Image_6c9m4b6c9m4b6c9m.jpeg', () => {
-  console.log('Texture loaded successfully');
-}, undefined, (err) => {
-  console.error('Error loading texture:', err);
-});
+// Load the 360 texture (used for reflections)
+const textureLoader = new THREE.TextureLoader();
+const texture360 = textureLoader.load(
+  '/Gemini_Generated_Image_6c9m4b6c9m4b6c9m.jpeg',
+  () => console.log('Texture loaded successfully'),
+  undefined,
+  (err) => console.error('Error loading texture:', err)
+);
 
 // Create a sphere for the environment (360-degree texture)
-const geometry = new THREE.SphereGeometry(500, 60, 40); // Large sphere
-const material = new THREE.MeshBasicMaterial({ map: texture360, side: THREE.BackSide }); // Texture on inside
-const sphere = new THREE.Mesh(geometry, material);
+const sphereGeometry = new THREE.SphereGeometry(500, 60, 40);
+const sphereMaterial = new THREE.MeshBasicMaterial({ map: texture360, side: THREE.BackSide });
+const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
 scene.add(sphere);
 
-// Ambient Light (for global illumination)
-const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+// Ambient Light (global illumination)
+const ambientLight = new THREE.AmbientLight(0xffffff, 3);
 scene.add(ambientLight);
 
-// Directional Light (to simulate sunlight)
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+// Directional Light (simulate sunlight)
+const directionalLight = new THREE.DirectionalLight(0xffffff, 5);
 directionalLight.position.set(10, 10, 10);
 scene.add(directionalLight);
+
+// Spotlight for extra lighting
+const spotLight = new THREE.SpotLight(0xffffff, 5);
+spotLight.position.set(10, 10, 10);
+spotLight.castShadow = true;
+spotLight.shadow.mapSize.width = 1024;
+spotLight.shadow.mapSize.height = 1024;
+spotLight.shadow.camera.far = 1000;
+scene.add(spotLight);
 
 // Set camera position
 camera.position.set(0, 10, 30);
@@ -67,29 +76,6 @@ gltfLoader.load(
     scene.add(shoe);
     console.log('Model added to the scene:', shoe);
 
-    // Load the cube texture for environment reflection
-    const cubeLoader = new THREE.CubeTextureLoader();
-    const cubeTexture = cubeLoader.load([ 
-      'posx.jpg', 'negx.jpg',
-      'posy.jpg', 'negy.jpg',
-      'posz.jpg', 'negz.jpg',
-    ]);
-    scene.background = cubeTexture;
-    scene.environment = cubeTexture;
-
-    // Apply a standard material
-    gltf.scene.traverse((child) => {
-      if (child.isMesh) {
-        child.material = new THREE.MeshStandardMaterial({
-          color: 0xFFFFFF,
-          roughness: 0.5,
-          metalness: 0.0,
-          envMap: cubeTexture,
-          envMapIntensity: 1.0
-        });
-      }
-    });
-
     // Collect part names of the shoe (for example, laces, sole, etc.)
     collectShoeParts(shoe);
   },
@@ -99,200 +85,123 @@ gltfLoader.load(
   }
 );
 
-// Function to collect the parts of the shoe
-const shoeParts = [];
-
-function collectShoeParts(model) {
-  model.traverse((child) => {
+// Function to collect shoe parts and allow them to be customized
+function collectShoeParts(shoe) {
+  shoe.traverse((child) => {
     if (child.isMesh) {
-      // Store part names to display them
-      shoeParts.push(child.name);
-      console.log('Part name:', child.name); // Log the name of each part
+      console.log('Part found:', child.name);
     }
   });
 }
 
-// dat.GUI - Adding sliders for adjusting light, camera position, zoom and object rotation
-const gui = new dat.GUI();
+// Raycaster setup
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let selectedMesh = null;
 
-// Light settings
-const lightParams = {
-  ambientIntensity: 20,
-  directionalIntensity: 30,
-  directionalX: 10,
-  directionalY: 10,
-  directionalZ: 10,
-};
+// Store the original color and texture of the selected part
+let originalColor = null;
+let originalTexture = null;
 
-// Camera settings
-const cameraParams = {
-  cameraX: 0,
-  cameraY: 10,
-  cameraZ: 30,
-  fov: 75,
-};
+// Handle mouse click for selecting parts
+window.addEventListener('click', (event) => {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-// Object rotation settings
-const rotationParams = {
-  rotateX: 0,
-  rotateY: 0,
-  rotateZ: 0,
-};
+  raycaster.setFromCamera(mouse, camera);
 
-// Create folders for light, camera settings, and object rotation in the GUI
-const lightFolder = gui.addFolder('Lighting');
-lightFolder.add(lightParams, 'ambientIntensity', 0, 100).onChange(updateLighting);
-lightFolder.add(lightParams, 'directionalIntensity', 0, 100).onChange(updateLighting);
-lightFolder.add(lightParams, 'directionalX', -50, 50).onChange(updateLighting);
-lightFolder.add(lightParams, 'directionalY', -50, 50).onChange(updateLighting);
-lightFolder.add(lightParams, 'directionalZ', -50, 50).onChange(updateLighting);
-lightFolder.open();
-
-// Create camera folder in the GUI
-const cameraFolder = gui.addFolder('Camera Position');
-cameraFolder.add(cameraParams, 'cameraX', -50, 50).onChange(updateCameraPosition);
-cameraFolder.add(cameraParams, 'cameraY', -50, 50).onChange(updateCameraPosition);
-cameraFolder.add(cameraParams, 'cameraZ', 1, 100).onChange(updateCameraPosition);
-cameraFolder.add(cameraParams, 'fov', 10, 150).onChange(updateCameraPosition);
-cameraFolder.open();
-
-// Create object rotation folder in the GUI
-const rotationFolder = gui.addFolder('Object Rotation');
-rotationFolder.add(rotationParams, 'rotateX', 0, Math.PI * 2).onChange(updateRotation);
-rotationFolder.add(rotationParams, 'rotateY', 0, Math.PI * 2).onChange(updateRotation);
-rotationFolder.add(rotationParams, 'rotateZ', 0, Math.PI * 2).onChange(updateRotation);
-rotationFolder.open();
-
-// Update lighting based on GUI sliders
-function updateLighting() {
-  ambientLight.intensity = lightParams.ambientIntensity;
-  directionalLight.intensity = lightParams.directionalIntensity;
-  directionalLight.position.set(lightParams.directionalX, lightParams.directionalY, lightParams.directionalZ);
-}
-
-// Update camera position and zoom based on GUI sliders
-function updateCameraPosition() {
-  camera.position.set(cameraParams.cameraX, cameraParams.cameraY, cameraParams.cameraZ);
-  camera.fov = cameraParams.fov;
-  camera.updateProjectionMatrix();
-}
-
-// Update object rotation based on GUI sliders
-function updateRotation() {
   if (shoe) {
-    shoe.rotation.x = rotationParams.rotateX;
-    shoe.rotation.y = rotationParams.rotateY;
-    shoe.rotation.z = rotationParams.rotateZ;
+    const intersects = raycaster.intersectObjects(shoe.children, true);
+    if (intersects.length > 0) {
+      if (selectedMesh) {
+        selectedMesh.material.emissive.set(0x000000);
+      }
+      selectedMesh = intersects[0].object;
+      console.log('Selected part:', selectedMesh.name);
+
+      // Update the span with the selected part name
+      const partTitleElement = document.getElementById('selected-part-title');
+      if (partTitleElement) {
+        const spanElement = partTitleElement.querySelector('.specific-part');
+        if (spanElement) {
+          spanElement.textContent = selectedMesh.name;
+        }
+      }
+
+      // Store the original color and texture
+      originalColor = selectedMesh.material.color.getHex();
+      originalTexture = selectedMesh.material.map;
+
+      selectedMesh.material.emissive.set(0x333333);
+
+      // Focus the camera on the selected part
+      focusOnPart(selectedMesh);
+    }
+  }
+});
+
+// Function to focus the camera on a part
+function focusOnPart(part) {
+  if (!part) return;
+
+  const partPosition = new THREE.Vector3();
+  part.getWorldPosition(partPosition);
+
+  const targetPosition = new THREE.Vector3(
+    partPosition.x + 30,
+    partPosition.y + 10,
+    partPosition.z + 10
+  );
+
+  const duration = 1.5;
+  const startTime = performance.now();
+
+  const initialCameraPosition = camera.position.clone();
+  const initialCameraTarget = controls.target.clone();
+
+  controls.enabled = false;
+
+  function animateCamera() {
+    const elapsedTime = (performance.now() - startTime) / 1000;
+    const t = Math.min(elapsedTime / duration, 1);
+
+    camera.position.lerpVectors(initialCameraPosition, targetPosition, t);
+    controls.target.lerpVectors(initialCameraTarget, partPosition, t);
+
+    if (t < 1) {
+      requestAnimationFrame(animateCamera);
+    } else {
+      controls.enabled = true;
+    }
+
+    controls.update();
+  }
+
+  animateCamera();
+}
+
+// Function to change the color of the selected part
+function changeColor(color) {
+  if (selectedMesh) {
+    selectedMesh.material.color.set(color);
+    selectedMesh.material.needsUpdate = true;
   }
 }
 
-// Handle the selection of shoe parts and mark the active button
-let activeButton = null; // Keep track of the currently active button
-let selectedPart = 'laces'; // Default selected part
-
-// Function to update the active button style
-function updateActiveButton(buttonId) {
-  if (activeButton) {
-    activeButton.classList.remove('active');
-  }
-  activeButton = document.getElementById(buttonId);
-  activeButton.classList.add('active');
-}
-
-// Update the title based on the selected part// De beschikbare onderdelen die aangepast kunnen worden
-const parts = [
-  'laces',          // Laces
-  'outside_1',      // Outside part 1
-  'outside_2',      // Outside part 2
-  'outside_3',      // Outside part 3
-  'meshes3_1',      // Meshes part 1
-  'sole_top',       // Sole top
-  'inside',         // Inside of the shoe
-];
-
-
-
-// Function om de geselecteerde deel aan te passen in de GUI
-function updateTitle() {
-  document.getElementById('selected-part-title').innerText = `Adjust ${selectedPart.charAt(0).toUpperCase() + selectedPart.slice(1)} Color`;
-}
-
-// Knoppen voor het selecteren van onderdelen
-document.getElementById('laces-btn').addEventListener('click', () => { 
-  selectedPart = 'laces'; 
-  updateTitle();
-  updateActiveButton('laces-btn');
-});
-
-document.getElementById('outside_1-btn').addEventListener('click', () => { 
-  selectedPart = 'outside_1'; 
-  updateTitle();
-  updateActiveButton('outside_1-btn');
-});
-
-document.getElementById('outside_2-btn').addEventListener('click', () => { 
-  selectedPart = 'outside_2'; 
-  updateTitle();
-  updateActiveButton('outside_2-btn');
-});
-
-document.getElementById('outside_3-btn').addEventListener('click', () => { 
-  selectedPart = 'outside_3'; 
-  updateTitle();
-  updateActiveButton('outside_3-btn');
-});
-
-document.getElementById('meshes3_1-btn').addEventListener('click', () => { 
-  selectedPart = 'meshes3_1'; 
-  updateTitle();
-  updateActiveButton('meshes3_1-btn');
-});
-
-document.getElementById('sole_top-btn').addEventListener('click', () => { 
-  selectedPart = 'sole_top'; 
-  updateTitle();
-  updateActiveButton('sole_top-btn');
-});
-
-document.getElementById('inside-btn').addEventListener('click', () => { 
-  selectedPart = 'inside'; 
-  updateTitle();
-  updateActiveButton('inside-btn');
+// Add event listeners for color buttons
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.color-button').forEach(button => {
+    button.addEventListener('click', () => {
+      const color = button.getAttribute('data-color');
+      changeColor(color);
+    });
+  });
 });
 
 // Animation loop
 function animate() {
+  requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
-  requestAnimationFrame(animate);
 }
-
-
-
-// Start animation loop
 animate();
-
-// Handle color change
-const colorButtons = document.querySelectorAll('.color-button');
-colorButtons.forEach(button => {
-  button.addEventListener('click', (event) => {
-    const selectedColor = event.target.closest('button').getAttribute('data-color'); // Verkrijg de geselecteerde kleur
-    console.log(`Selected color: ${selectedColor}`);
-
-    // Zet de kleur op het geselecteerde onderdeel van de schoen
-    if (shoe) {
-      shoe.traverse((child) => {
-        if (child.isMesh) {
-          // Loop door alle delen en pas de kleur toe op het geselecteerde deel
-          parts.forEach(part => {
-            if (selectedPart === part && child.name === part) {
-              child.material.color.set(selectedColor); // Pas de kleur toe
-            }
-          });
-        }
-      });
-    }
-  });
-});
-
-

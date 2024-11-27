@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div id="configurator-container">
+      <h2 id="selected-part-title">Adjust Laces Color</h2>
+      
+      <!-- Buttons for selecting different parts of the shoe -->
+      <div class="part-selection">
+        <button class="part-button" id="laces-btn">Laces</button>
+        <button class="part-button" id="outside_1-btn">NoseLaces pand</button>
+        <button class="part-button" id="outside_2-btn">InsideLaces pand</button>
+        <button class="part-button" id="outside_3-btn">NoseHeel pand</button>
+        <button class="part-button" id="meshes3_1-btn">Onderzool</button>
+        <button class="part-button" id="sole_top-btn">Sole Top</button>
+        <button class="part-button" id="inside-btn">Inside</button>
+      </div>
+      
+      <h3>Pick a Color</h3>
+      <div class="color-options">
+        <button class="color-button" data-color="red">
+          <div class="color-circle" style="background-color: red;"></div>
+          <span>Red</span>
+        </button>
+        <button class="color-button" data-color="green">
+          <div class="color-circle" style="background-color: green;"></div>
+          <span>Green</span>
+        </button>
+        <button class="color-button" data-color="blue">
+          <div class="color-circle" style="background-color: blue;"></div>
+          <span>Blue</span>
+        </button>
+        <button class="color-button" data-color="yellow">
+          <div class="color-circle" style="background-color: yellow;"></div>
+          <span>Yellow</span>
+        </button>
+        <button class="color-button" data-color="orange">
+          <div class="color-circle" style="background-color: orange;"></div>
+          <span>Orange</span>
+        </button>
+      </div>
+      
+    <div id="app"></div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
