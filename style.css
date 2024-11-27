@@ -17,7 +17,7 @@ body {
 #configurator-container {
   position: fixed;
   right: 0;
-  top: 60%;
+  top: 40%;
   width: 600px; /* Width of the configuration panel */
   height: 100%;
   background-color: #ffffff;
